@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown → Telegram Converter</title>
+    <script src="https://unpkg.com/telegramify-markdown@1.3.0"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --color-bg-primary: #0f172a;
+            --color-bg-secondary: #1e293b;
+            --color-text-primary: #f1f5f9;
+            --color-text-secondary: #cbd5e1;
+            --color-primary: #38bdf8;
+            --color-primary-hover: #0ea5e9;
+            --color-success: #10b981;
+            --color-border: #334155;
+        }
+
+        @media (prefers-color-scheme: light) {
+            :root {
+                --color-bg-primary: #ffffff;
+                --color-bg-secondary: #f1f5f9;
+                --color-text-primary: #0f172a;
+                --color-text-secondary: #475569;
+                --color-primary: #0284c7;
+                --color-primary-hover: #0369a1;
+                --color-success: #059669;
+                --color-border: #e2e8f0;
+            }
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--color-bg-primary);
+            color: var(--color-text-primary);
+            line-height: 1.6;
+            padding: 16px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, var(--color-primary), #06b6d4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            color: var(--color-text-secondary);
+            font-size: 14px;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        @media (min-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr 1fr;
+                gap: 20px;
+            }
+        }
+
+        .section {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        label {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--color-text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        textarea {
+            flex: 1;
+            min-height: 250px;
+            padding: 16px;
+            background-color: var(--color-bg-secondary);
+            color: var(--color-text-primary);
+            border: 1px solid var(--color-border);
+            border-radius: 8px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            resize: vertical;
+            transition: all 0.2s ease;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.1);
+            background-color: var(--color-bg-secondary);
+        }
+
+        textarea:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin: 24px 0;
+        }
+
+        @media (min-width: 768px) {
+            .button-group {
+                grid-column: 1 / -1;
+                justify-content: center;
+                margin: 0;
+                padding: 20px;
+                background-color: var(--color-bg-secondary);
+                border-radius: 8px;
+                border: 1px solid var(--color-border);
+            }
+        }
+
+        button {
+            padding: 12px 24px;
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            flex: 1;
+            min-width: 150px;
+        }
+
+        @media (min-width: 768px) {
+            button {
+                flex: 0 1 auto;
+                min-width: 160px;
+            }
+        }
+
+        .btn-primary {
+            background-color: var(--color-primary);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background-color: var(--color-primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(56, 189, 248, 0.3);
+        }
+
+        .btn-primary:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .btn-success {
+            background-color: var(--color-success);
+            color: white;
+        }
+
+        .btn-success:hover:not(:disabled) {
+            background-color: #059669;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-success:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background-color: var(--color-bg-secondary);
+            color: var(--color-text-primary);
+            border: 1px solid var(--color-border);
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background-color: var(--color-border);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .info-message {
+            padding: 12px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            text-align: center;
+            transition: all 0.3s ease;
+            margin: 0;
+            min-height: 24px;
+        }
+
+        .info-message.hidden {
+            opacity: 0;
+            height: 0;
+            padding: 0;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .info-message.success {
+            background-color: rgba(16, 185, 129, 0.1);
+            color: var(--color-success);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .info-message.error {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            gap: 12px;
+            padding: 16px;
+            background-color: var(--color-bg-secondary);
+            border-radius: 6px;
+            border: 1px solid var(--color-border);
+            font-size: 12px;
+            margin-top: 12px;
+        }
+
+        .stat-item {
+            text-align: center;
+            flex: 1;
+        }
+
+        .stat-label {
+            color: var(--color-text-secondary);
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--color-primary);
+        }
+
+        .footer {
+            text-align: center;
+            padding: 24px 0;
+            color: var(--color-text-secondary);
+            font-size: 12px;
+            border-top: 1px solid var(--color-border);
+            margin-top: 32px;
+        }
+
+        .footer a {
+            color: var(--color-primary);
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        .language-switcher {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            display: flex;
+            gap: 6px;
+            z-index: 1000;
+            background-color: var(--color-bg-secondary);
+            padding: 6px;
+            border-radius: 6px;
+            border: 1px solid var(--color-border);
+        }
+
+        .lang-btn {
+            padding: 6px 10px !important;
+            font-size: 11px !important;
+            min-width: auto !important;
+            background-color: transparent;
+            color: var(--color-text-secondary);
+            border: 1px solid transparent !important;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            letter-spacing: 0 !important;
+            text-transform: none !important;
+            font-weight: 500;
+        }
+
+        .lang-btn:hover {
+            color: var(--color-text-primary);
+            background-color: var(--color-border);
+        }
+
+        .lang-btn.active {
+            background-color: var(--color-primary);
+            color: white;
+            border-color: var(--color-primary) !important;
+        }
+
+        .lang-btn.active:hover {
+            background-color: var(--color-primary-hover);
+        }
+
+        .desktop-layout {
+            display: none;
+        }
+
+        @media (min-width: 768px) {
+            .mobile-layout {
+                display: none;
+            }
+
+            .desktop-layout {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 20px;
+                align-items: start;
+            }
+
+            .button-group {
+                grid-column: 1 / -1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="language-switcher">
+            <button class="lang-btn active" data-lang="ru">🇷🇺 RU</button>
+            <button class="lang-btn" data-lang="en">🇬🇧 EN</button>
+        </div>
+        <header>
+            <h1 data-i18n="title">📝 Markdown → Telegram</h1>
+            <p class="subtitle" data-i18n="subtitle">Конвертер Markdown из ChatGPT в формат Telegram</p>
+        </header>
+
+        <div class="main-content">
+            <div class="section">
+                <label for="inputMarkdown" data-i18n="input_label">1️⃣ Markdown из ChatGPT</label>
+                <textarea 
+                    id="inputMarkdown" 
+                    data-i18n-placeholder="input_placeholder"
+                ></textarea>
+                <div class="stats">
+                    <div class="stat-item">
+                        <span class="stat-label" data-i18n="chars">Символов</span>
+                        <span class="stat-value" id="inputChars">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label" data-i18n="lines">Строк</span>
+                        <span class="stat-value" id="inputLines">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <label for="outputTelegram" data-i18n="output_label">2️⃣ Результат для Telegram</label>
+                <textarea 
+                    id="outputTelegram" 
+                    data-i18n-placeholder="output_placeholder"
+                    readonly
+                ></textarea>
+                <div class="stats">
+                    <div class="stat-item">
+                        <span class="stat-label" data-i18n="chars">Символов</span>
+                        <span class="stat-value" id="outputChars">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label" data-i18n="lines">Строк</span>
+                        <span class="stat-value" id="outputLines">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="button-group">
+            <button id="convertBtn" class="btn-primary" data-i18n="btn_convert">🔄 Конвертировать</button>
+            <button id="copyBtn" class="btn-success" disabled data-i18n="btn_copy">📋 Копировать результат</button>
+            <button id="clearBtn" class="btn-secondary" data-i18n="btn_clear">🗑️ Очистить</button>
+        </div>
+
+        <div id="message" class="info-message hidden"></div>
+
+        <footer class="footer">
+            <p data-i18n="footer_tip">💡 Совет: Просто копируй текст из ChatGPT, вставляй в первое поле, жми конвертировать.</p>
+            <p style="margin-top: 8px;" data-i18n="footer_note">Ничего не сохраняется, всё работает локально в браузере.</p>
+        </footer>
+    </div>
+
+    <script>
+        // Переводы
+        const translations = {
+            ru: {
+                title: '📝 Markdown → Telegram',
+                subtitle: 'Конвертер Markdown из ChatGPT в формат Telegram',
+                input_label: '1️⃣ Markdown из ChatGPT',
+                input_placeholder: 'Вставь текст из ChatGPT здесь...\n\nПример:\n**Жирный текст** и *курсив*\n[Ссылка](https://example.com)',
+                output_label: '2️⃣ Результат для Telegram',
+                output_placeholder: 'Результат появится здесь...',
+                chars: 'Символов',
+                lines: 'Строк',
+                btn_convert: '🔄 Конвертировать',
+                btn_copy: '📋 Копировать результат',
+                btn_clear: '🗑️ Очистить',
+                footer_tip: '💡 Совет: Просто копируй текст из ChatGPT, вставляй в первое поле, жми конвертировать.',
+                footer_note: 'Ничего не сохраняется, всё работает локально в браузере.',
+                msg_empty: '⚠️ Вставь текст в первое поле',
+                msg_success: '✅ Текст успешно конвертирован!',
+                msg_error_convert: '❌ Ошибка при конвертации: ',
+                msg_copy_success: '✅ Скопировано в буфер обмена!',
+                msg_copy_error: '❌ Не удалось скопировать',
+                msg_empty_copy: '⚠️ Нечего копировать',
+                msg_cleared: '🗑️ Поля очищены'
+            },
+            en: {
+                title: '📝 Markdown → Telegram',
+                subtitle: 'Convert Markdown from ChatGPT to Telegram format',
+                input_label: '1️⃣ Markdown from ChatGPT',
+                input_placeholder: 'Paste ChatGPT text here...\n\nExample:\n**Bold text** and *italic*\n[Link](https://example.com)',
+                output_label: '2️⃣ Result for Telegram',
+                output_placeholder: 'Result will appear here...',
+                chars: 'Characters',
+                lines: 'Lines',
+                btn_convert: '🔄 Convert',
+                btn_copy: '📋 Copy Result',
+                btn_clear: '🗑️ Clear',
+                footer_tip: '💡 Tip: Just copy text from ChatGPT, paste it in the first field, and click convert.',
+                footer_note: 'Nothing is saved, everything works locally in your browser.',
+                msg_empty: '⚠️ Paste text in the first field',
+                msg_success: '✅ Text converted successfully!',
+                msg_error_convert: '❌ Conversion error: ',
+                msg_copy_success: '✅ Copied to clipboard!',
+                msg_copy_error: '❌ Failed to copy',
+                msg_empty_copy: '⚠️ Nothing to copy',
+                msg_cleared: '🗑️ Fields cleared'
+            }
+        };
+
+        // Получить текущий язык
+        function getCurrentLanguage() {
+            const saved = localStorage.getItem('language') || 'ru';
+            return saved;
+        }
+
+        // Установить язык
+        function setLanguage(lang) {
+            localStorage.setItem('language', lang);
+            document.documentElement.lang = lang;
+            updateTranslations(lang);
+            updateLanguageSwitcher(lang);
+        }
+
+        // Обновить все переводы
+        function updateTranslations(lang) {
+            const trans = translations[lang];
+            
+            // Обновить текстовый контент
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                el.textContent = trans[key];
+            });
+
+            // Обновить placeholder'ы
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+                const key = el.getAttribute('data-i18n-placeholder');
+                el.placeholder = trans[key];
+            });
+        }
+
+        // Обновить переключатель языков
+        function updateLanguageSwitcher(lang) {
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.getAttribute('data-lang') === lang) {
+                    btn.classList.add('active');
+                }
+            });
+        }
+
+        // Инициализировать язык
+        const currentLang = getCurrentLanguage();
+        setLanguage(currentLang);
+
+        const inputMarkdown = document.getElementById('inputMarkdown');
+        const outputTelegram = document.getElementById('outputTelegram');
+        const convertBtn = document.getElementById('convertBtn');
+        const copyBtn = document.getElementById('copyBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const message = document.getElementById('message');
+
+        // Event listeners для переключения языков
+        document.querySelectorAll('.lang-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const lang = btn.getAttribute('data-lang');
+                setLanguage(lang);
+            });
+        });
+
+        // Обновление статистики
+        function updateStats() {
+            const inputText = inputMarkdown.value;
+            const outputText = outputTelegram.value;
+
+            document.getElementById('inputChars').textContent = inputText.length;
+            document.getElementById('inputLines').textContent = inputText.split('\n').length;
+            document.getElementById('outputChars').textContent = outputText.length;
+            document.getElementById('outputLines').textContent = outputText.split('\n').length;
+        }
+
+        // Показ сообщений
+        function showMessage(key, type = 'success', extra = '') {
+            const lang = getCurrentLanguage();
+            const text = translations[lang][key];
+            message.textContent = text + extra;
+            message.className = `info-message ${type}`;
+            setTimeout(() => {
+                message.classList.add('hidden');
+            }, 3000);
+        }
+
+        // Конвертация
+        convertBtn.addEventListener('click', () => {
+            const inputText = inputMarkdown.value.trim();
+
+            if (!inputText) {
+                showMessage('msg_empty', 'error');
+                return;
+            }
+
+            try {
+                const result = window.telegramifyMarkdown(inputText);
+                outputTelegram.value = result;
+                copyBtn.disabled = false;
+                updateStats();
+                showMessage('msg_success');
+            } catch (error) {
+                showMessage('msg_error_convert', 'error', error.message);
+                console.error(error);
+            }
+        });
+
+        // Копирование
+        copyBtn.addEventListener('click', async () => {
+            const text = outputTelegram.value;
+            if (!text) {
+                showMessage('msg_empty_copy', 'error');
+                return;
+            }
+
+            try {
+                await navigator.clipboard.writeText(text);
+                showMessage('msg_copy_success');
+            } catch (error) {
+                showMessage('msg_copy_error', 'error');
+                console.error(error);
+            }
+        });
+
+        // Очистка
+        clearBtn.addEventListener('click', () => {
+            inputMarkdown.value = '';
+            outputTelegram.value = '';
+            copyBtn.disabled = true;
+            updateStats();
+            showMessage('msg_cleared');
+        });
+
+        // Enter для конвертации (Ctrl+Enter)
+        inputMarkdown.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                convertBtn.click();
+            }
+        });
+
+        // Обновление статистики при вводе
+        inputMarkdown.addEventListener('input', updateStats);
+        outputTelegram.addEventListener('input', updateStats);
+
+        // Инициализация
+        updateStats();
+    </script>
+</body>
+</html>
