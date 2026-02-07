@@ -23,26 +23,29 @@
                 return `__INLINE_CODE_${inlineCode.length - 1}__`;
             });
             
-            // Шаг 3: Обработать форматирование (порядок важен!)
-            // Bold + Italic: ***text*** или ___text___ → *_text_*
-            result = result.replace(/(\*\*\*|___)(.+?)(\*\*\*|___)/g, '*_$2_*');
+            // Шаг 3: ЭКРАНИРОВАТЬ ВСЕ спецсимволы везде
+            // Это критично для Telegram MarkdownV2
+            result = result.split('\n').map(line => {
+                // Экранируем: \ _ * [ ] ( ) ~ ` > # + - = | { } . !
+                return line.replace(/[\\\\_*\[\]()~`>#+-=|{}.!]/g, '\\$&');
+            }).join('\n');
             
-            // Bold: **text** → *text*
-            result = result.replace(/\*\*(.+?)\*\*/g, '*$1*');
+            // Шаг 4: Обработать форматирование (ищем по экранированным паттернам)
+            // Bold + Italic: \*\*\*text\*\*\* → *_text_*
+            result = result.replace(/\\\*\\\*\\\*(.+?)\\\*\\\*\\\*/g, '*_$1_*');
             
-            // Italic: *text* → _text_ (но не внутри **...** который стал *...*)
-            result = result.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '_$1_');
+            // Bold: \*\*text\*\* → *text*
+            result = result.replace(/\\\*\\\*(.+?)\\\*\\\*/g, '*$1*');
             
-            // Шаг 4: Экранировать спецсимволы Telegram MarkdownV2
-            // Экранируем все символы кроме тех что используются в форматировании
-            result = result.replace(/([_~`>#+\-=|{}.!\\])/g, '\\$1');
+            // Italic: \*text\* → _text_
+            result = result.replace(/(?<!\\\*)\\\*(?!\\\*)(.+?)(?<!\\\*)\\\*(?!\\\*)/g, '_$1_');
             
-            // Шаг 5: Вернуть code блоки БЕЗ экранирования (Telegram их понимает)
+            // Шаг 5: Вернуть code блоки (они остаются экранированными внутри)
             codeBlocks.forEach((block, i) => {
                 result = result.replace(`__CODE_BLOCK_${i}__`, block);
             });
             
-            // Шаг 6: Вернуть inline code БЕЗ экранирования 
+            // Шаг 6: Вернуть inline code
             inlineCode.forEach((code, i) => {
                 result = result.replace(`__INLINE_CODE_${i}__`, code);
             });
