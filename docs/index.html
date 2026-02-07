@@ -4,58 +4,79 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Markdown → Telegram Converter</title>
-    <script>
-        // Правильная функция конвертации Markdown → Telegram MarkdownV2
-        function telegramifyMarkdown(text) {
-            let result = text;
-            
-            // Шаг 1: Защитить code блоки (```)
-            const codeBlocks = [];
-            result = result.replace(/```[\s\S]*?```/g, (match) => {
-                codeBlocks.push(match);
-                return `__CODE_BLOCK_${codeBlocks.length - 1}__`;
-            });
-            
-            // Шаг 2: Защитить inline code (`)
-            const inlineCode = [];
-            result = result.replace(/`[^`]*`/g, (match) => {
-                inlineCode.push(match);
-                return `__INLINE_CODE_${inlineCode.length - 1}__`;
-            });
-            
-            // Шаг 3: ЭКРАНИРОВАТЬ ВСЕ спецсимволы везде
-            // Это критично для Telegram MarkdownV2
-            result = result.split('\n').map(line => {
-                // Экранируем: \ _ * [ ] ( ) ~ ` > # + - = | { } . !
-                return line.replace(/[\\\\_*\[\]()~`>#+-=|{}.!]/g, '\\$&');
-            }).join('\n');
-            
-            // Шаг 4: Обработать форматирование (ищем по экранированным паттернам)
-            // Bold + Italic: \*\*\*text\*\*\* → *_text_*
-            result = result.replace(/\\\*\\\*\\\*(.+?)\\\*\\\*\\\*/g, '*_$1_*');
-            
-            // Bold: \*\*text\*\* → *text*
-            result = result.replace(/\\\*\\\*(.+?)\\\*\\\*/g, '*$1*');
-            
-            // Italic: \*text\* → _text_
-            result = result.replace(/(?<!\\\*)\\\*(?!\\\*)(.+?)(?<!\\\*)\\\*(?!\\\*)/g, '_$1_');
-            
-            // Шаг 5: Вернуть code блоки (они остаются экранированными внутри)
-            codeBlocks.forEach((block, i) => {
-                result = result.replace(`__CODE_BLOCK_${i}__`, block);
-            });
-            
-            // Шаг 6: Вернуть inline code
-            inlineCode.forEach((code, i) => {
-                result = result.replace(`__INLINE_CODE_${i}__`, code);
-            });
-            
-            // Шаг 7: Исправить экранирование в ссылках [text](url)
-            result = result.replace(/\\\[(.+?)\\\]\\\((.+?)\\\)/g, '[$1]($2)');
-            
-            return result;
-        }
-    </script>
+<script>
+    // Конвертация Markdown → Telegram UI по согласованным правилам
+    function telegramifyMarkdown(text) {
+        let result = text;
+        
+        // Шаг 1: Защитить code блоки (``` ... ```)
+        const codeBlocks = [];
+        result = result.replace(/```[\s\S]*?```/g, (match) => {
+            codeBlocks.push(match);
+            return `__CODE_BLOCK_${codeBlocks.length - 1}__`;
+        });
+        
+        // Шаг 2: Защитить inline code (`...`)
+        const inlineCode = [];
+        result = result.replace(/`[^`]*`/g, (match) => {
+            inlineCode.push(match);
+            return `__INLINE_CODE_${inlineCode.length - 1}__`;
+        });
+        
+        // Шаг 3: Заголовки
+        // H1: # → ▶️ Заголовок
+        result = result.replace(/^#\s+(.+)$/gm, '▶️ $1');
+        // H2: ## → 🔹 Заголовок
+        result = result.replace(/^##\s+(.+)$/gm, '🔹 $1');
+        // H3: ### → ◾ Заголовок
+        result = result.replace(/^###\s+(.+)$/gm, '◾ $1');
+        // H4: #### → ◦ Заголовок
+        result = result.replace(/^####\s+(.+)$/gm, '◦ $1');
+        
+        // Шаг 4: Списки — * в начале строки → - (дефис)
+        result = result.replace(/^\*\s+/gm, '- ');
+        
+        // Шаг 5: Цитаты
+        // > текст → __текст__ + пустая строка после
+        result = result.replace(/^>\s?(.*)$/gm, '__$1__\n');
+        
+        // Шаг 6: Форматирование текста
+        // ***текст*** → **текст** (жирный)
+        result = result.replace(/\*\*\*(.+?)\*\*\*/g, '**$1**');
+        // *текст* → **текст** (курсив в Markdown → жирный в UI)
+        result = result.replace(/\*(.+?)\*/g, '**$1**');
+        // __текст__ → оставить как есть (подчёркнутый)
+        // ~~текст~~ → оставить как есть (зачёркнутый)
+        
+        // Шаг 7: Горизонтальные линии
+        // --- → оставить как есть (ничего специально не делаем)
+
+        // Шаг 8: Пустые строки
+        // Удалить все пустые строки (строки только с пробелами / пустые),
+        // при этом пустая строка после цитаты уже добавлена на шаге 5
+        result = result
+            .split('\n')
+            .filter(line => line.trim() !== '')
+            .join('\n');
+        
+        // Шаг 9: Вернуть code блоки
+        codeBlocks.forEach((block, i) => {
+            result = result.replace(`__CODE_BLOCK_${i}__`, block);
+        });
+        
+        // Шаг 10: Вернуть inline code
+        inlineCode.forEach((code, i) => {
+            result = result.replace(`__INLINE_CODE_${i}__`, code);
+        });
+        
+        // Шаг 11: Ссылки не трогаем, спецсимволы не экранируем
+        // [текст](url) → как есть
+        // спецсимволы → используются как есть в UI
+        
+        return result;
+    }
+</script>
+
     <style>
         * {
             margin: 0;
@@ -463,6 +484,10 @@
 
         <footer class="footer">
             <p data-i18n="footer_tip">💡 Совет: Просто копируй текст из ChatGPT, вставляй в первое поле, жми конвертировать.</p>
+            <p style="margin-top: 8px; font-size: 11px; color: var(--color-text-secondary);">
+                ✅ Поддерживается: **жирный**, *курсив*, ~~зачеркивание~~, `код`, блоки кода, > цитаты, списки, ссылки<br/>
+                📋 Таблица соответствия в переводах
+            </p>
             <p style="margin-top: 8px;" data-i18n="footer_note">Ничего не сохраняется, всё работает локально в браузере.</p>
         </footer>
     </div>
@@ -474,7 +499,7 @@
                 title: '📝 Markdown → Telegram',
                 subtitle: 'Конвертер Markdown из ChatGPT в формат Telegram',
                 input_label: '1️⃣ Markdown из ChatGPT',
-                input_placeholder: 'Вставь текст из ChatGPT здесь...\n\nПример:\n**Жирный текст** и *курсив*\n[Ссылка](https://example.com)',
+                input_placeholder: 'Вставь текст из ChatGPT здесь...\n\nПримеры:\n**Жирный** и *курсив* и ***оба***\n~~Зачеркнуто~~\n`код` и > цитата\n- Список\n[Ссылка](url)',
                 output_label: '2️⃣ Результат для Telegram',
                 output_placeholder: 'Результат появится здесь...',
                 chars: 'Символов',
@@ -496,7 +521,7 @@
                 title: '📝 Markdown → Telegram',
                 subtitle: 'Convert Markdown from ChatGPT to Telegram format',
                 input_label: '1️⃣ Markdown from ChatGPT',
-                input_placeholder: 'Paste ChatGPT text here...\n\nExample:\n**Bold text** and *italic*\n[Link](https://example.com)',
+                input_placeholder: 'Paste ChatGPT text here...\n\nExamples:\n**Bold** and *italic* and ***both***\n~~Strikethrough~~\n`code` and > quote\n- List items\n[Link](url)',
                 output_label: '2️⃣ Result for Telegram',
                 output_placeholder: 'Result will appear here...',
                 chars: 'Characters',
