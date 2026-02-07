@@ -5,53 +5,50 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Markdown → Telegram Converter</title>
     <script>
-        // Простая функция конвертации Markdown → Telegram MarkdownV2
+        // Правильная функция конвертации Markdown → Telegram MarkdownV2
         function telegramifyMarkdown(text) {
-            // Экранируем спецсимволы Telegram MarkdownV2
-            const escapeChars = ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!'];
-            
             let result = text;
             
-            // Обработка code блоков (защитить)
+            // Шаг 1: Защитить code блоки (```)
             const codeBlocks = [];
             result = result.replace(/```[\s\S]*?```/g, (match) => {
                 codeBlocks.push(match);
                 return `__CODE_BLOCK_${codeBlocks.length - 1}__`;
             });
             
-            // Обработка inline code (защитить)
+            // Шаг 2: Защитить inline code (`)
             const inlineCode = [];
-            result = result.replace(/`[^`]+`/g, (match) => {
+            result = result.replace(/`[^`]*`/g, (match) => {
                 inlineCode.push(match);
                 return `__INLINE_CODE_${inlineCode.length - 1}__`;
             });
             
-            // Bold + Italic: ***text*** → *_text_*
-            result = result.replace(/\*\*\*(.+?)\*\*\*/g, '*_$1_*');
+            // Шаг 3: Обработать форматирование (порядок важен!)
+            // Bold + Italic: ***text*** или ___text___ → *_text_*
+            result = result.replace(/(\*\*\*|___)(.+?)(\*\*\*|___)/g, '*_$2_*');
             
             // Bold: **text** → *text*
             result = result.replace(/\*\*(.+?)\*\*/g, '*$1*');
             
-            // Italic: *text* → _text_
-            result = result.replace(/\*(.+?)\*/g, '_$1_');
+            // Italic: *text* → _text_ (но не внутри **...** который стал *...*)
+            result = result.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '_$1_');
             
-            // Restore code блоки с экранированием
+            // Шаг 4: Экранировать спецсимволы Telegram MarkdownV2
+            // Экранируем все символы кроме тех что используются в форматировании
+            result = result.replace(/([_~`>#+\-=|{}.!\\])/g, '\\$1');
+            
+            // Шаг 5: Вернуть code блоки БЕЗ экранирования (Telegram их понимает)
             codeBlocks.forEach((block, i) => {
-                const escaped = block.replace(/[`]/g, '\\`');
-                result = result.replace(`__CODE_BLOCK_${i}__`, escaped);
+                result = result.replace(`__CODE_BLOCK_${i}__`, block);
             });
             
-            // Restore inline code с экранированием
+            // Шаг 6: Вернуть inline code БЕЗ экранирования 
             inlineCode.forEach((code, i) => {
-                const escaped = code.replace(/[`]/g, '\\`');
-                result = result.replace(`__INLINE_CODE_${i}__`, escaped);
+                result = result.replace(`__INLINE_CODE_${i}__`, code);
             });
             
-            // Экранируем другие спецсимволы (кроме [ и ] в ссылках)
-            result = result.replace(/([_~>#+\-=|{}.!])/g, '\\$1');
-            
-            // Исправляем скобки в ссылках
-            result = result.replace(/\\\[([^\]]+)\\\]/g, '[$1]');
+            // Шаг 7: Исправить экранирование в ссылках [text](url)
+            result = result.replace(/\\\[(.+?)\\\]\\\((.+?)\\\)/g, '[$1]($2)');
             
             return result;
         }
